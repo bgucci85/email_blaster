@@ -1,0 +1,99 @@
+## 📄 Product Requirements Document (PRD)  
+**Game Title (Working):** *Triple Match: Email Blaster*  
+**Concept Owner:** Bernard Meyer  
+**Last Updated:** 2025-04-03  
+
+---
+
+### 🎯 **Goal**
+Create a web-based pixel FPS game where players shoot emails through three dynamic, swinging rings—representing “Right Message,” “Right Person,” and “Right Time”—to simulate the challenge of perfect email marketing. Players score points by aligning shots through all rings.
+
+---
+
+### 🧠 **Core Concept**
+Players use a pixelated email cannon to fire “emails” through three concentric rings that move independently in left-right arcs. A perfect shot threads through all three. The better the aim, the higher the score.
+
+---
+
+### 🕹️ **Gameplay Mechanics**
+#### Player Actions
+- First-person static view.
+- Aim (mouse/touch position centered).
+- Tap/Click/Spacebar to fire.
+- Cooldown (0.5s–1s) between shots.
+
+#### Objective
+Shoot through all 3 rings:
+- **Outer Ring** = Right Message  
+- **Middle Ring** = Right Person  
+- **Inner Ring** = Right Time  
+
+---
+
+### 🎯 **Scoring**
+| Result | Description | Points |
+|--------|-------------|--------|
+| 🎯 All 3 Rings Hit | Perfect shot | 100 pts |
+| ✅ 2 Rings Hit | Decent targeting | 50 pts |
+| ➖ 1 Ring Hit | Weak effort | 10 pts |
+| ❌ Miss | Failure | 0 pts |
+
+Bonus:
+- 3x perfect shots in a row = +200 bonus
+- “Spam Folder” fail screen on 3 consecutive misses
+
+---
+
+### 🔄 **Ring Behavior**
+Each ring is:
+- Concentric (aligned in 3D perspective).
+- Oscillating horizontally (swinging in an arc).
+- Moving at different **frequencies and amplitudes**.
+- Randomly adjusts **size, speed, and arc** per round.
+
+| Ring | Represents | Speed | Size | Notes |
+|------|------------|-------|------|-------|
+| Outer | Right Message | Slow | Medium | Occasionally shrinks |
+| Middle | Right Person | Medium | Large | More erratic |
+| Inner | Right Time | Fast | Small | Smallest/hardest |
+
+---
+
+### 📈 **Difficulty Progression**
+- Starts easy: large rings, predictable movement
+- Progresses to faster, smaller rings
+- Advanced: temporary invisibility, random speed shifts, or double-ring fakeouts
+
+---
+
+### 💻 **Platform & Tech**
+- **Platform**: Web (desktop & mobile-friendly)
+- **Graphics**: Pixel-art, minimal, arcade aesthetic
+- **Engine**: Phaser.js (recommended) or HTML5 Canvas
+- **Resolution**: Retro 8-bit look (e.g. 256x144 canvas scaled up)
+
+---
+
+### 🔊 **Sound & Visual Feedback**
+- Email shot: “whoosh-pop”
+- Perfect shot: “zing!” + glow trail
+- Miss: “thud” or “spam fart”
+- Score UI: Top-right, clean pixel font
+- Visuals: Flash "Right Message. Right Person. Right Time." on perfect shot
+
+---
+
+### 🧩 **Extra Features (Optional)**
+- 🏆 Leaderboard: Global or local high scores
+- 🧠 Easter Eggs: A/B Test icons or segmentation power-ups
+- 🧪 Power-ups: Slow time, freeze rings, widen target
+- 🎨 Branded version: “Powered by Omnisend” at bottom corner
+
+---
+
+### 🧪 **Testing Considerations**
+- Ensure collision detection works cleanly through all three rings
+- Smooth arc movement across browsers/devices
+- Responsive layout for desktop and mobile
+- Frame rate target: 60fps
+

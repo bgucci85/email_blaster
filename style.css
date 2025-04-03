@@ -1,0 +1,29 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #222;
+    overflow: hidden; /* Prevent scrollbars */
+}
+
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    display: block;
+    /* Ensure canvas scales within the container */
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated; /* Keep pixel art sharp */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+} 
