@@ -1,13 +1,15 @@
 const GAME_WIDTH = 1200;
 const GAME_HEIGHT = 675;
-const SHOOT_COOLDOWN = 500; // 0.5 seconds between shots
+const SHOOT_COOLDOWN = 100; // 0.1 seconds between shots
 const LEVEL_DURATION = 10000; // 10 seconds per level
 
 // Level configurations
 const LEVEL_CONFIGS = [
     { speedMultiplier: 0.75, amplitude: 40, name: "Level 1" }, // 25% slower, 40px amplitude
     { speedMultiplier: 0.9, amplitude: 60, name: "Level 2" },  // 10% slower, 60px amplitude
-    { speedMultiplier: 1.0, amplitude: 90, name: "Level 3" }   // Current speed, 90px amplitude
+    { speedMultiplier: 1.0, amplitude: 90, name: "Level 3" },   // Current speed, 90px amplitude
+    { speedMultiplier: 1.5, amplitude: 135, name: "Level 4" },   // 50% faster, 135px amplitude (1.5x Level 3)
+    { speedMultiplier: 2.25, amplitude: 202, name: "Level 5" }   // 50% faster than Level 4, 50% wider amplitude
 ];
 
 // Base ring speeds (current speeds)
@@ -94,6 +96,7 @@ const LOADING_TEXT = {
 class LoadingScene extends Phaser.Scene {
     constructor() {
         super('LoadingScene');
+        this.music = null;
     }
 
     preload() {
@@ -101,6 +104,13 @@ class LoadingScene extends Phaser.Scene {
         this.load.image('email-bullet', 'assets/images/email-bullet.png');
         this.load.image('email-fire', 'assets/images/email_fire.png');
         this.load.image('cover-image', 'assets/images/email_blaster_cover.png');
+        
+        // Load all audio files
+        this.load.audio('loading-music', 'assets/sounds/loading_screen.mp3');
+        this.load.audio('start-game', 'assets/sounds/start_game.mp3');
+        this.load.audio('points', 'assets/sounds/points.mp3');
+        this.load.audio('lose-points', 'assets/sounds/lose_points.mp3');
+        this.load.audio('gunshot', 'assets/sounds/gunshot.mp3');
 
         // Add detailed loading event handlers
         this.load.on('filecomplete', (key, type, data) => {
@@ -130,6 +140,12 @@ class LoadingScene extends Phaser.Scene {
         // Create black background
         this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000).setOrigin(0);
 
+        // Create the music instance but don't play it yet
+        this.music = this.sound.add('loading-music', {
+            volume: 0.5,
+            loop: true
+        });
+
         // Add cover image on the left
         const cover = this.add.image(GAME_WIDTH * 0.3, GAME_HEIGHT * 0.5, 'cover-image');
         
@@ -142,21 +158,20 @@ class LoadingScene extends Phaser.Scene {
         cover.setAlpha(0);
 
         // Add the text messages on the right side
-        const startX = GAME_WIDTH * 0.75; // Move text more to the right
-        const startY = GAME_HEIGHT * 0.25; // Start higher
-        const lineSpacing = 50; // Increased spacing for larger text
+        const startX = GAME_WIDTH * 0.75;
+        const startY = GAME_HEIGHT * 0.25;
+        const lineSpacing = 50;
 
         // Add text with consistent formatting
         LOADING_TEXT.message.forEach((line, index) => {
             const y = startY + (index * lineSpacing);
             const style = {
-                font: '24px Arial', // Increased by 25% from 19px
+                font: '24px Arial',
                 fill: '#ffffff',
                 align: 'center',
                 wordWrap: { width: GAME_WIDTH * 0.4 }
             };
             
-            // Make the mission statement bold but same size
             if (index === 4) {
                 style.font = 'bold 24px Arial';
             }
@@ -166,16 +181,59 @@ class LoadingScene extends Phaser.Scene {
                 .setAlpha(0);
         });
 
+        // Add click anywhere to start text immediately
+        const clickText = this.add.text(
+            GAME_WIDTH / 2,
+            GAME_HEIGHT * 0.9,
+            'Click anywhere to begin',
+            {
+                font: 'bold 28px Arial',
+                fill: '#ffffff',
+                shadow: { color: '#000000', blur: 4, fill: true }
+            }
+        ).setOrigin(0.5);
+
+        // Make it pulse
+        this.tweens.add({
+            targets: clickText,
+            alpha: 0.5,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Add one-time click handler to start everything
+        const startEverything = () => {
+            // Remove the click handler and text
+            this.input.off('pointerdown', startEverything);
+            clickText.destroy();
+
+            // Resume audio context
+            if (this.sound.locked) {
+                this.sound.unlock();
+            }
+
+            // Start playing the music
+            this.music.play();
+
+            // Start the rest of the animations
+            this.startAnimations(cover, startX);
+        };
+
+        this.input.on('pointerdown', startEverything);
+    }
+
+    startAnimations(cover, startX) {
         // Fade in cover image first
         this.tweens.add({
             targets: cover,
             alpha: 1,
-            duration: 1000,
+            duration: 1500,
             ease: 'Power2'
         });
 
         // Fade in each line sequentially
-        let delay = 1000; // Start text fade-in after cover
+        let delay = 1500;
         const texts = this.children.list.filter(child => 
             child instanceof Phaser.GameObjects.Text
         );
@@ -185,13 +243,13 @@ class LoadingScene extends Phaser.Scene {
                 targets: text,
                 alpha: 1,
                 duration: 1000,
-                delay: delay + (index * 800),
+                delay: delay + (index * 1000),
                 ease: 'Power2'
             });
         });
 
         // Add "Click to start" text after a delay
-        this.time.delayedCall(5000, () => {
+        this.time.delayedCall(5800, () => {
             const startText = this.add.text(
                 startX,
                 GAME_HEIGHT * 0.8,
@@ -222,6 +280,19 @@ class LoadingScene extends Phaser.Scene {
 
             // Add click handler to start the game
             this.input.on('pointerdown', () => {
+                // Play start game sound
+                this.sound.play('start-game');
+                
+                // Fade out music when transitioning to game
+                this.tweens.add({
+                    targets: this.music,
+                    volume: 0,
+                    duration: 1000,
+                    onComplete: () => {
+                        this.music.stop();
+                    }
+                });
+                
                 this.cameras.main.fade(1000, 0, 0, 0);
                 this.time.delayedCall(1000, () => {
                     this.scene.start('GameScene');
@@ -242,6 +313,7 @@ class GameScene extends Phaser.Scene {
         this.levelStartTime = 0;
         this.stars = [];
         this.isCountingDown = false;
+        this.sounds = {};
     }
 
     createStarryBackground() {
@@ -347,6 +419,21 @@ class GameScene extends Phaser.Scene {
             this.rings.forEach((ring, index) => {
                 ring.speed = BASE_SPEEDS[index] * config.speedMultiplier;
                 ring.amplitude = config.amplitude;
+                
+                // Shrink the inner (blue) ring by 20% each level
+                if (index === 2) { // Index 2 is the inner ring
+                    let shrinkFactor;
+                    if (levelIndex === 4) { // Level 5
+                        // Make it 50% smaller than Level 4
+                        shrinkFactor = Math.pow(0.8, 2) * 0.5 * 0.5; // Level 3 scale * 0.5 (Level 4) * 0.5 (Level 5)
+                    } else if (levelIndex === 3) { // Level 4
+                        // Make it 50% smaller than Level 3
+                        shrinkFactor = Math.pow(0.8, 2) * 0.5; // Level 3 scale * 0.5
+                    } else {
+                        shrinkFactor = Math.pow(0.8, levelIndex); // 20% smaller each level
+                    }
+                    ring.setScale(shrinkFactor);
+                }
             });
             
             // Set level start time after countdown
@@ -359,6 +446,11 @@ class GameScene extends Phaser.Scene {
         this.load.image('email-bullet', 'assets/images/email-bullet.png');
         this.load.image('email-fire', 'assets/images/email_fire.png');
         this.load.image('cover-image', 'assets/images/email_blaster_cover.png');
+        
+        // Load sound effects
+        this.load.audio('points', 'assets/sounds/points.mp3');
+        this.load.audio('lose-points', 'assets/sounds/lose_points.mp3');
+        this.load.audio('gunshot', 'assets/sounds/gunshot.mp3');
         
         // Add debug logging for asset loading
         this.load.on('complete', () => {
@@ -436,6 +528,13 @@ class GameScene extends Phaser.Scene {
     create() {
         this.createStarryBackground();
 
+        // Initialize sounds
+        this.sounds = {
+            points: this.sound.add('points', { volume: 0.5 }),
+            losePoints: this.sound.add('lose-points', { volume: 0.5 }),
+            gunshot: this.sound.add('gunshot', { volume: 0.3 }) // Lower volume for frequent sound
+        };
+
         // Initialize score with enhanced text style
         this.score = 0;
         this.scoreText = this.add.text(10, 10, 'Score: 0', FONT_CONFIG.score);
@@ -502,6 +601,9 @@ class GameScene extends Phaser.Scene {
         }
 
         try {
+            // Play gunshot sound
+            this.sounds.gunshot.play();
+            
             // Create email sprite with fire effect
             const email = this.add.sprite(GAME_WIDTH / 2, GAME_HEIGHT - 30, 'email-fire');
             console.log('Email projectile created:', email);
@@ -555,9 +657,6 @@ class GameScene extends Phaser.Scene {
                     duration: 200,
                     onComplete: () => flash.destroy()
                 });
-
-                // Calculate score immediately after hitting each ring
-                this.updateScore(email.hitRings);
             }
         }
     }
@@ -566,7 +665,6 @@ class GameScene extends Phaser.Scene {
         let pointsEarned = 0;
         let message = '';
         let textColor = '#ff0000'; // Default to red for penalties
-        let textStyle = { ...FONT_CONFIG.points }; // Clone the base style
 
         // Simplified scoring conditions
         if (hitRings.size === 3) {
@@ -574,14 +672,22 @@ class GameScene extends Phaser.Scene {
             pointsEarned = 200;
             message = 'Perfect! +200';
             textColor = '#00ff00'; // Green for perfect shots only
+            this.sounds.points.play(); // Play success sound
         } else if (hitRings.size === 2) {
             // Two rings penalty
             pointsEarned = -50;
             message = '-50';
+            this.sounds.losePoints.play(); // Play penalty sound
         } else if (hitRings.size === 1) {
             // Single ring penalty
             pointsEarned = -100;
             message = '-100';
+            this.sounds.losePoints.play(); // Play penalty sound
+        } else if (hitRings.size === 0) {
+            // Complete miss penalty
+            pointsEarned = -200;
+            message = 'Miss! -200';
+            this.sounds.losePoints.play(); // Play penalty sound
         }
 
         // Only show score if points were earned/lost
@@ -591,7 +697,7 @@ class GameScene extends Phaser.Scene {
             this.scoreText.setText('Score: ' + this.score);
 
             // Show floating score text
-            textStyle.fill = textColor;
+            const textStyle = { ...FONT_CONFIG.points, fill: textColor };
             const floatingText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, message, textStyle)
                 .setOrigin(0.5)
                 .setFontSize(pointsEarned > 0 ? 32 : 24); // Larger text for perfect shots
@@ -696,13 +802,19 @@ class GameScene extends Phaser.Scene {
             // Update rotation to match movement
             email.rotation = Math.atan2(email.velocityY, email.velocityX);
 
+            // Check collisions with rings
             this.rings.forEach((ring) => {
                 this.checkEmailRingCollision(email, ring);
             });
 
-            // Only remove emails when they go off screen
+            // Calculate score and remove email when it goes off screen
             if (email.y < -10 || email.y > GAME_HEIGHT + 10 ||
                 email.x < -10 || email.x > GAME_WIDTH + 10) {
+                // Calculate final score before destroying the email
+                if (!email.scoreCalculated) {
+                    this.updateScore(email.hitRings);
+                    email.scoreCalculated = true;
+                }
                 email.destroy();
             }
         });
